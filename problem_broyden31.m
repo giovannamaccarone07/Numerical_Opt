@@ -6,7 +6,7 @@ function [f,gradf,hessf,xbar, rfun] = problem_broyden31()
 %   r_k(x) = (3 - 2*x_k)*x_k - x_{k-1} - 2*x_{k+1} + 1,
 %   with boundary conditions: x_0 = x_{n+1} = 0.
 %
-% The objective function has least–squares form:
+% The objective function has a least–squares form:
 %   F(x) = 0.5 * ||r(x)||^2 = 0.5 * sum_{k=1}^n r_k(x)^2
 %
 % Gradient and Hessian:
