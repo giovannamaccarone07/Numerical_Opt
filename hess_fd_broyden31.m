@@ -1,7 +1,7 @@
 function H = hess_fd_broyden31(gfun, x, k, type)
-% HESS_FD_BROYDEN31 computes the finite difference Hessian for Problem 31.
-% It exploits the pentadiagonal structure of the Hessian, requiring 
-% only 5 evaluations of the gradient function.
+% HESS_FD_BROYDEN31 computes the finite difference Hessian for problem 31.
+% It exploits the pentadiagonal structure of the Hessian, applying a 
+% 5-colouring tecnique.
 %
 % INPUTS:
 %   x    : current point
@@ -37,7 +37,7 @@ for group = 1:5
     % Compute the finite difference for the gradient
     delta_g = g_perturbed - g_x;
 
-    % Extract the finite differences into the Hessian structure
+    % Building the hessian matrix
     for j = indices
         % The non-zero elements are only from row j-2 to j+2
         row_start = max(1, j-2);
@@ -47,6 +47,6 @@ for group = 1:5
     end
 end
 
-% Symmetrize to correct microscopic numerical errors
+% Taking the symmetric to correct numerical errors
 H = (H + H') / 2;
 end

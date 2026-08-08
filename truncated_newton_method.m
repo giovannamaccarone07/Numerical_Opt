@@ -122,8 +122,8 @@ pks         = zeros(length(x0), kmax);
 inner_iters = zeros(1, kmax); 
 
 
-% k = 1;
-k = 0;
+k = 1;
+% k = 0;
 while k <= kmax && gradfk_norm >= tolgrad
 
     % The system we need to solve is Hess(fk)*pk = -graf(fk) <-> Hk*z=ck

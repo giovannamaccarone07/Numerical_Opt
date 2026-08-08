@@ -18,6 +18,7 @@ function hvec = steps_fd(x, k, type)
     else
         hvec = h * abs(x);
         hvec(hvec == 0) = h; % safeguard
+	hvec(hvec < 1e-14) = 1e-14;
     end
     
 end
