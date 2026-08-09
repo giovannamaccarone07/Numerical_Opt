@@ -2,14 +2,14 @@ clear; clc; close all;
 
 % --- Problem Loading ---
 % problem_broyden31 must return 5 outputs as we defined
-[f, grad_exact, hess_exact, xbarfun, rfun] = problem_broyden31();
+[f, grad_exact, hess_exact, xbarfun, rfun,xstarfun] = problem_broyden31();
 
 % --- Fixed Parameters ---
 % Set the random seed to the minimum student ID of the team
 seed    = 1234; % <-- UPDATE THIS WITH YOUR TEAM'S MINIMUM ID[cite: 2]
 tolgrad = 1e-6;
 
-n_list  = [2, 1e3, 1e4, 1e5]; % Required dimensions[cite: 2]
+n_list  = [2, 1e3]; % Required dimensions[cite: 2]
 k_list  = [4, 8, 12];         % Required k values for FD[cite: 2]
 fdtypes = [1, 2];             % 1 = constant step (h), 2 = relative step (hi)
 
@@ -19,9 +19,9 @@ params_modified.kmax = 50;  params_modified.c1 = 1e-4;
 params_modified.rho  = 0.5; params_modified.btmax = 10;
 params_modified.beta = 1e-2;
 
-params_truncated.kmax = 50;  params_truncated.c1 = 1e-3;
-params_truncated.rho  = 0.8; params_truncated.btmax = 40;
-params_truncated.max_cg = 1000;
+params_truncated.kmax = 20;  params_truncated.c1 = 1e-4;
+params_truncated.rho  = 0.3; params_truncated.btmax = 5;
+params_truncated.max_cg = 5;
 
 % --- Main Loop ---
 results = struct([]);
@@ -36,7 +36,7 @@ for n = n_list
     % Generate 5 random points in the hypercube [-2, 0]
     % Since xb = -1, xb + (2*rand - 1) covers [-2, 0][cite: 1, 2]
     X0 = [xb, xb + (2*rand(n,5) - 1)];   
-
+    xstar_n = xstarfun(n);
     % Test cases: Exact, FD Hessian only, Full FD
     for dm = ["exact", "case1", "case2"]
     
@@ -71,7 +71,7 @@ for n = n_list
             end
             
             % Loop over optimization methods
-            for method = ["modified", "truncated"]
+            for method = ["truncated"]
                 if method == "modified"
                     prm = params_modified;
                 else
@@ -88,7 +88,7 @@ for n = n_list
                                 gradf, hessf, prm.kmax, tolgrad, prm.c1, prm.rho, ...
                                 prm.btmax, prm.beta);
                         else
-                            [~, fk, gn, it, xseq] = truncated_newton_method(x0, f, ...
+                            [~, fk, gn, it, xseq,~,~,inner] = truncated_newton_method(x0, f, ...
                                 gradf, hessf, prm.kmax, tolgrad, prm.c1, prm.rho, ...
                                 prm.btmax, prm.max_cg);
                         end
@@ -116,6 +116,8 @@ for n = n_list
                     results(idx).success = succ;
                     results(idx).rate = rate;
                     results(idx).time = t;
+                    results(idx).xseq = xseq;
+                    results(idx).inner_iters = inner;
                     
                     % --- Safe formatting for printing ---
                     if isnan(kk)
@@ -138,3 +140,33 @@ end
 % --- Save Results ---
 save('broyden31_fd_results.mat', 'results');
 disp('Done. Results saved in broyden31_fd_results.mat');
+
+%% --- Esempio: grafico per Truncated Newton, esatto, n=1000 ---
+n_target    = 1000;
+mask = [results.n] == n_target & [results.deriv_mode]=="exact" & ...
+        [results.method]== "truncated";
+
+xseq_list = {results(mask).xseq};   % cell array, uno per starting point
+inners = {results(mask).inner_iters};
+xstar_n = xstarfun(n_target);       % richiede l'output aggiunto al punto 1
+
+plot_error_ratio(xseq_list, xstar_n, 'TruncatedNewton', 'Broyden31', 'graphs_broyden31');
+for s = 1:6
+    x_final = xseq_list{s}(:, end);
+    inner = inners{s}
+    fprintf('start %d: f(x_final)=%.6e, f(xstar)=%.6e, ||x_final-xstar||=%.4f\n', ...
+        s, f(x_final), f(xstar_n), norm(x_final - xstar_n));
+    
+end
+%%
+
+for s = [2 4]   % quelli con il picco
+    xseq = xseq_list{s};
+    K = size(xseq,2);
+    err = zeros(1,K);
+    for k = 1:K
+        err(k) = norm(xseq(:,k) - xstar_n);
+    end
+    fprintf('start %d:\n', s);
+    fprintf('  %.3e\n', err);   % stampa TUTTI i valori in notazione scientifica
+end

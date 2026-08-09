@@ -115,16 +115,17 @@ farmijo = @(fk, alpha, c1_gradfk_pk) ...
     fk + alpha * c1_gradfk_pk;
 
 % Preallocations.
-xseq        = zeros(length(x0), kmax);
+xseq        = zeros(length(x0), kmax+1);
 btseq       = zeros(1, kmax);
 alphas      = zeros(1, kmax);
 pks         = zeros(length(x0), kmax);
 inner_iters = zeros(1, kmax); 
 
 
-k = 1;
-% k = 0;
-while k <= kmax && gradfk_norm >= tolgrad
+%k = 1;
+k = 0;
+xseq(:,1) = xk;   % xk qui è ancora x0
+while k < kmax && gradfk_norm >= tolgrad
 
     % The system we need to solve is Hess(fk)*pk = -graf(fk) <-> Hk*z=ck
     z = zeros(length(x0),1); 
@@ -151,20 +152,19 @@ while k <= kmax && gradfk_norm >= tolgrad
         curv = dk'*Hdk;
         
         % If the curvature is positive we can proceed with CG method.
-        if curv <= 1e-10            
+        if curv <= 1e-10 * norm(dk)^2 * norm(Hk, 'fro')   % soglia relativa alla scala della matrice    
             if j == 0
                 p_tn = -gradfk;                
             else
                 p_tn = z;
             end  
-
-            stop_inner = true;
+            %stop_inner = true;
             break
 
         else
             alpha_j = r_old/curv;
             z = z + alpha_j * dk;
-            r = r - alpha_j * Hdk; 
+            r = r - alpha_j * Hdk; %!!!!!!!!!!11 +++++ ?
 
             
             % Updates for the next iteration.
@@ -179,13 +179,13 @@ while k <= kmax && gradfk_norm >= tolgrad
 
         % Checking convergence.
         if norm(r)/norm(ck) <= eta_k 
-            p_tn = z;      
-            stop_inner = true;
+            p_tn = z;       %% ridondante?? 
+            %stop_inner = true;
             break;
         end
     end
 
-    inner_iters(k) = j;
+    j_cg = j;
     pk = p_tn;
     
     if norm(pk) <= 1e-12
@@ -217,33 +217,33 @@ while k <= kmax && gradfk_norm >= tolgrad
     if bt == btmax && fnew > farmijo(fk, alpha, c1_gradfk_pk)
         disp('Backtracking (Truncated Newton): maximum number of iterations reached.');
         k = k+1;
-        xseq(:, k) = xk;
+        xseq(:, k+1) = xk;
         btseq(k) = bt;
         pks(:, k) = pk;
         alphas(k) = alpha;
+        inner_iters(k) = j_cg;
+
         break;            
     end
             
-    % Update variables.
     xk = xnew;
     fk = fnew;
     gradfk = gradf(xk);
     gradfk_norm = norm(gradfk);
     k = k + 1;
     
-    % Storing
-    xseq(:, k) = xk;
-    btseq(k) = bt;
-    pks(:, k) = pk;
-    alphas(k) = alpha;
+    xseq(:, k+1)   = xk;
+    btseq(k)       = bt;
+    pks(:, k)      = pk;
+    alphas(k)      = alpha;
+    inner_iters(k) = j_cg;
+        
 
 end %while loop on k
 
 % Trimming the final structures.
-xseq   = xseq(:, 1:k);
+xseq   = xseq(:, 1:k+1);
 btseq  = btseq(1:k);
 pks    = pks(:, 1:k);
-
-xseq = [x0, xseq]; 
-
+inner_iters = inner_iters(:,1:k);
 end %function end
