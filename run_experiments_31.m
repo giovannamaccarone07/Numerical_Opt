@@ -9,7 +9,7 @@ clear; clc; close all;
 seed    = 1234; % <-- UPDATE THIS WITH YOUR TEAM'S MINIMUM ID[cite: 2]
 tolgrad = 1e-6;
 
-n_list  = [2, 1e3, 1e4, 1e5]; % Required dimensions[cite: 2]
+n_list  = [2, 1e3]; % Required dimensions[cite: 2]
 k_list  = [4, 8, 12];         % Required k values for FD[cite: 2]
 fdtypes = [1, 2];             % 1 = constant step (h), 2 = relative step (hi)
 
@@ -21,7 +21,7 @@ params_modified.beta = 1e-2;
 
 params_truncated.kmax = 20;  params_truncated.c1 = 1e-4;
 params_truncated.rho  = 0.3; params_truncated.btmax = 10;
-params_truncated.max_cg = 200;
+params_truncated.max_cg = 20;
 
 % --- Main Loop ---
 results = struct([]);
@@ -142,7 +142,7 @@ save('broyden31_fd_results.mat', 'results');
 disp('Done. Results saved in broyden31_fd_results.mat');
 
 %% --- Esempio: grafico per Truncated Newton, esatto, n=1000 ---
-n_target    = 10000;
+n_target    = 1000;
 mask = [results.n] == n_target & [results.deriv_mode]=="exact" & ...
         [results.method]== "truncated";
 
@@ -158,15 +158,16 @@ for s = 1:6
         s, f(x_final), f(xstar_n), norm(x_final - xstar_n));
     
 end
-%%
 
-for s = [2 4]   % quelli con il picco
-    xseq = xseq_list{s};
-    K = size(xseq,2);
-    err = zeros(1,K);
-    for k = 1:K
-        err(k) = norm(xseq(:,k) - xstar_n);
-    end
-    fprintf('start %d:\n', s);
-    fprintf('  %.3e\n', err);   % stampa TUTTI i valori in notazione scientifica
-end
+%%
+% 
+% for s = [2 4]   % quelli con il picco
+%     xseq = xseq_list{s};
+%     K = size(xseq,2);
+%     err = zeros(1,K);
+%     for k = 1:K
+%         err(k) = norm(xseq(:,k) - xstar_n);
+%     end
+%     fprintf('start %d:\n', s);
+%     fprintf('  %.3e\n', err);   % stampa TUTTI i valori in notazione scientifica
+% end
