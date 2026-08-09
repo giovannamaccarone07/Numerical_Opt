@@ -1,5 +1,11 @@
 clear; clc; close all;
 
+% Aggiunge questa cartella e TUTTE le sottocartelle al path
+project_root = fileparts(mfilename('fullpath'));   % cartella dove sta questo script
+addpath(genpath(project_root));
+
+
+
 % --- Problem Loading ---
 % problem_broyden31 must return 5 outputs as we defined
 [f, grad_exact, hess_exact, xbarfun, rfun,xstarfun] = problem_broyden31();
@@ -15,9 +21,9 @@ fdtypes = [1, 2];             % 1 = constant step (h), 2 = relative step (hi)
 
 % Tuned Parameters for Modified and Truncated Newton
 % (These might need adjustment for n = 1e5 if the algorithm struggles)
-params_modified.kmax = 50;  params_modified.c1 = 1e-4;
+params_modified.kmax = 20;  params_modified.c1 = 1e-4;
 params_modified.rho  = 0.5; params_modified.btmax = 5;
-params_modified.beta = 1e-2;
+params_modified.beta = 1e-3;
 
 params_truncated.kmax = 20;  params_truncated.c1 = 1e-4;
 params_truncated.rho  = 0.3; params_truncated.btmax = 10;
@@ -71,7 +77,7 @@ for n = n_list
             end
             
             % Loop over optimization methods
-            for method = ["truncated"]
+            for method = ["modified"]
                 if method == "modified"
                     prm = params_modified;
                 else
@@ -117,7 +123,7 @@ for n = n_list
                     results(idx).rate = rate;
                     results(idx).time = t;
                     results(idx).xseq = xseq;
-                    results(idx).inner_iters = inner;
+                    %results(idx).inner_iters = inner;
                     
                     % --- Safe formatting for printing ---
                     if isnan(kk)
@@ -142,18 +148,18 @@ save('broyden31_fd_results.mat', 'results');
 disp('Done. Results saved in broyden31_fd_results.mat');
 
 %% --- Esempio: grafico per Truncated Newton, esatto, n=1000 ---
-n_target    = 1000;
+n_target    = 2;
 mask = [results.n] == n_target & [results.deriv_mode]=="exact" & ...
-        [results.method]== "truncated";
+        [results.method]== "modified";
 
 xseq_list = {results(mask).xseq};   % cell array, uno per starting point
-inners = {results(mask).inner_iters};
+%inners = {results(mask).inner_iters};
 xstar_n = xstarfun(n_target);       % richiede l'output aggiunto al punto 1
 
-plot_error_ratio(xseq_list, xstar_n, 'TruncatedNewton', 'Broyden31', 'graphs_broyden31');
+plot_error_ratio(xseq_list, xstar_n, 'TruncatedNewton', 'Broyden31', 'graphs_broyden31',3);
 for s = 1:6
     x_final = xseq_list{s}(:, end);
-    inner = inners{s}
+    %inner = inners{s};
     fprintf('start %d: f(x_final)=%.6e, f(xstar)=%.6e, ||x_final-xstar||=%.4f\n', ...
         s, f(x_final), f(xstar_n), norm(x_final - xstar_n));
     
