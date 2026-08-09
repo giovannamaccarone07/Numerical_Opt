@@ -16,12 +16,12 @@ fdtypes = [1, 2];             % 1 = constant step (h), 2 = relative step (hi)
 % Tuned Parameters for Modified and Truncated Newton
 % (These might need adjustment for n = 1e5 if the algorithm struggles)
 params_modified.kmax = 50;  params_modified.c1 = 1e-4;
-params_modified.rho  = 0.5; params_modified.btmax = 10;
+params_modified.rho  = 0.5; params_modified.btmax = 5;
 params_modified.beta = 1e-2;
 
 params_truncated.kmax = 20;  params_truncated.c1 = 1e-4;
-params_truncated.rho  = 0.3; params_truncated.btmax = 5;
-params_truncated.max_cg = 5;
+params_truncated.rho  = 0.3; params_truncated.btmax = 10;
+params_truncated.max_cg = 20;
 
 % --- Main Loop ---
 results = struct([]);

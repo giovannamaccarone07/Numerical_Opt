@@ -127,20 +127,22 @@ k = 0;
 xseq(:,1) = xk;   % xk qui è ancora x0
 while k < kmax && gradfk_norm >= tolgrad
 
-    % The system we need to solve is Hess(fk)*pk = -graf(fk) <-> Hk*z=ck
+    eta_k = min(0.5, sqrt(gradfk_norm))*gradfk_norm;
+    % The system we need  to solve is Hess(fk)*pk = -graf(fk) <-> Hk*z=ck
     z = zeros(length(x0),1); 
     Hk = hessf(xk);
-    ck = -gradfk;
+    rk =gradfk;
+    dk = -rk;
+    %ck = -gradfk;
 
     % Initialize p_tn with the steepest descent direction (-gradfk) 
     % as a fallback to guarantee a valid descent direction even if 
     % the CG inner loop fails or terminates at the first iteration.
-    p_tn = ck; 
-    eta_k = min(0.5, sqrt(gradfk_norm));
+    %p_tn = ck; 
 
-    r = ck - Hk * z; % Residual of the system.
-    r_old = r'*r;
-    dk = r; % d is the conjugate direction, at the first iteration z = 0 so dk = ck.
+    %r = ck - Hk * z; % Residual of the system.
+    r_old = rk'*rk;
+    %dk = r; % d is the conjugate direction, at the first iteration z = 0 so dk = ck.
 
     stop_inner = false; % Boolean variable used to understand whether the inner loop got to convergence,
                         % it has to go back to false at each iteration k.
@@ -164,25 +166,25 @@ while k < kmax && gradfk_norm >= tolgrad
         else
             alpha_j = r_old/curv;
             z = z + alpha_j * dk;
-            r = r - alpha_j * Hdk; %!!!!!!!!!!11 +++++ ?
+            rk = rk + alpha_j * Hdk; %!!!!!!!!!!11 +++++ ?
 
+            % Checking convergence.
+            if norm(rk) <= eta_k 
+                p_tn = z;       %% ridondante?? 
+                %stop_inner = true;
+                break;
+            end
             
             % Updates for the next iteration.
-            rk_new = r'*r;
+            rk_new = rk'*rk;
             beta_j = rk_new/r_old;
-            dk = r + beta_j * dk;
+            dk = -rk + beta_j * dk;
             r_old = rk_new; 
-            p_tn = z;
+            %p_tn = z;
             j = j+1;
 
         end
 
-        % Checking convergence.
-        if norm(r)/norm(ck) <= eta_k 
-            p_tn = z;       %% ridondante?? 
-            %stop_inner = true;
-            break;
-        end
     end
 
     j_cg = j;
