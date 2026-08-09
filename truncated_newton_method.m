@@ -188,6 +188,10 @@ while k < kmax && gradfk_norm >= tolgrad
     end
 
     j_cg = j;
+    if j == max_cg
+        disp('MAX CG (Truncated Newton): maximum number of cg iterations reached.');
+        p_tn = z;   % CG esaurito senza soddisfare curvatura negativa o tolleranza: usa l'ultimo iterato valido
+    end
     pk = p_tn;
     
     if norm(pk) <= 1e-12
