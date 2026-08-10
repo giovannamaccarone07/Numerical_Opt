@@ -154,7 +154,7 @@ while k < kmax && gradfk_norm >= tolgrad
         curv = dk'*Hdk;
         
         % If the curvature is positive we can proceed with CG method.
-        if curv <= 1e-10 * norm(dk)^2 * norm(Hk, 'fro')   % soglia relativa alla scala della matrice    
+        if curv <= 1e-10 * norm(dk)^2 %* norm(Hk, 'fro')   % soglia relativa alla scala della matrice    
             if j == 0
                 p_tn = -gradfk;                
             else

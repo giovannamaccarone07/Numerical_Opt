@@ -22,7 +22,7 @@ fdtypes = [1, 2];             % 1 = constant step (h), 2 = relative step (hi)
 % Tuned Parameters for Modified and Truncated Newton
 % (These might need adjustment for n = 1e5 if the algorithm struggles)
 params_modified.kmax = 20;  params_modified.c1 = 1e-4;
-params_modified.rho  = 0.5; params_modified.btmax = 5;
+params_modified.rho  = 0.5; params_modified.btmax = 10;
 params_modified.beta = 1e-3;
 
 params_truncated.kmax = 20;  params_truncated.c1 = 1e-4;
@@ -156,7 +156,7 @@ xseq_list = {results(mask).xseq};   % cell array, uno per starting point
 %inners = {results(mask).inner_iters};
 xstar_n = xstarfun(n_target);       % richiede l'output aggiunto al punto 1
 
-plot_error_ratio(xseq_list, xstar_n, 'TruncatedNewton', 'Broyden31', 'graphs_broyden31',3);
+plot_error_ratio(xseq_list, xstar_n, 'TruncatedNewton', 'Broyden31', 'graphs_broyden31',4);
 for s = 1:6
     x_final = xseq_list{s}(:, end);
     %inner = inners{s};
@@ -167,7 +167,7 @@ end
 
 %%
 % 
-% for s = [2 4]   % quelli con il picco
+% for s = [1 2 3 4 5 6]   % quelli con il picco
 %     xseq = xseq_list{s};
 %     K = size(xseq,2);
 %     err = zeros(1,K);
