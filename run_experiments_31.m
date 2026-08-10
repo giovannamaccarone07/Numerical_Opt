@@ -177,3 +177,19 @@ end
 %     fprintf('start %d:\n', s);
 %     fprintf('  %.3e\n', err);   % stampa TUTTI i valori in notazione scientifica
 % end
+
+%%
+
+% --- Grafici aggiuntivi ---
+if n_target == 2
+    plot_contour_paths(f, xseq_list, 'ModifiedNewton', 'Broyden31', 'graphs_broyden31');
+end
+plot_convergence_rate(xseq_list, grad_exact, 'ModifiedNewton', 'Broyden31', 'graphs_broyden31');
+plot_error_to_xstar(xseq_list, xstar_n, 'ModifiedNewton', 'Broyden31', 'graphs_broyden31');
+for s = 1:6
+    x_final = xseq_list{s}(:, end);
+    %inner = inners{s};
+    fprintf('start %d: f(x_final)=%.6e, f(xstar)=%.6e, ||x_final-xstar||=%.4f\n', ...
+        s, f(x_final), f(xstar_n), norm(x_final - xstar_n));
+    
+end
