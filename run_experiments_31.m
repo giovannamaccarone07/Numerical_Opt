@@ -12,7 +12,7 @@ addpath(genpath(project_root));
 
 % --- Fixed Parameters ---
 % Set the random seed to the minimum student ID of the team
-seed    = 1234; % <-- UPDATE THIS WITH YOUR TEAM'S MINIMUM ID[cite: 2]
+seed    = 346710; % <-- UPDATE THIS WITH YOUR TEAM'S MINIMUM ID[cite: 2]
 tolgrad = 1e-6;
 
 n_list  = [2, 1e3]; % Required dimensions[cite: 2]
@@ -42,7 +42,7 @@ for n = n_list
     % Generate 5 random points in the hypercube [-2, 0]
     % Since xb = -1, xb + (2*rand - 1) covers [-2, 0][cite: 1, 2]
     X0 = [xb, xb + (2*rand(n,5) - 1)];   
-    xstar_n = xstarfun(n);
+    %xstar_n = xstarfun(n);
     % Test cases: Exact, FD Hessian only, Full FD
     for dm = ["exact", "case1", "case2"]
     
@@ -77,7 +77,7 @@ for n = n_list
             end
             
             % Loop over optimization methods
-            for method = ["modified"]
+            for method = ["truncated","modified"]
                 if method == "modified"
                     prm = params_modified;
                 else
@@ -150,7 +150,7 @@ disp('Done. Results saved in broyden31_fd_results.mat');
 %% --- Esempio: grafico per Truncated Newton, esatto, n=1000 ---
 n_target    = 2;
 mask = [results.n] == n_target & [results.deriv_mode]=="exact" & ...
-        [results.method]== "modified";
+        [results.method]== "truncated";
 
 xseq_list = {results(mask).xseq};   % cell array, uno per starting point
 %inners = {results(mask).inner_iters};
@@ -166,20 +166,6 @@ for s = 1:6
 end
 
 %%
-% 
-% for s = [1 2 3 4 5 6]   % quelli con il picco
-%     xseq = xseq_list{s};
-%     K = size(xseq,2);
-%     err = zeros(1,K);
-%     for k = 1:K
-%         err(k) = norm(xseq(:,k) - xstar_n);
-%     end
-%     fprintf('start %d:\n', s);
-%     fprintf('  %.3e\n', err);   % stampa TUTTI i valori in notazione scientifica
-% end
-
-%%
-
 % --- Grafici aggiuntivi ---
 if n_target == 2
     plot_contour_paths(f, xseq_list, 'ModifiedNewton', 'Broyden31', 'graphs_broyden31');
@@ -193,3 +179,119 @@ for s = 1:6
         s, f(x_final), f(xstar_n), norm(x_final - xstar_n));
     
 end
+
+
+
+%% --- Generazione automatica dei grafici per TUTTE le combinazioni ---
+% Per ogni n, deriv_mode (e k/type quando applicabile) e method, genera:
+%   - plot_error_ratio        (sempre)
+%   - plot_contour_paths      (solo per n = 2)
+%   - plot_convergence_rate   (sempre)
+%   - plot_error_to_xstar     (sempre)
+%
+% I grafici finiscono in graphs_broyden31/n<N>/ , con nomi di file
+% univoci ed espliciti tipo:
+%   TruncatedNewton_case2_k8_hi_n1000_...
+%   ModifiedNewton_exact_n2_...
+%
+% method_map traduce l'etichetta usata internamente in results (stringhe
+% "modified"/"truncated") nel nome leggibile da usare nei titoli/file.
+method_map = containers.Map({'modified','truncated'}, ...
+                             {'ModifiedNewton','TruncatedNewton'});
+ 
+base_outdir = 'graphs_broyden31';
+ 
+% Disabilita la visualizzazione a schermo delle figure: vengono create
+% e salvate su disco senza aprire finestre (utile con decine di
+% combinazioni). Viene ripristinato il comportamento di default alla
+% fine del blocco, anche in caso di errore (onCleanup).
+old_visible_state = get(0, 'DefaultFigureVisible');
+set(0, 'DefaultFigureVisible', 'off');
+restore_visibility = onCleanup(@() set(0, 'DefaultFigureVisible', old_visible_state));
+ 
+for n_target = n_list
+ 
+    xstar_n = xstarfun(n_target);
+    outdir_n = fullfile(base_outdir, sprintf('n%d', n_target));
+ 
+    % Sottocartelle per tipo di grafico
+    outdir_contour   = fullfile(outdir_n, 'contour');
+    outdir_rate      = fullfile(outdir_n, 'convergence_rate');
+    outdir_errratio  = fullfile(outdir_n, 'error_ratio');
+    outdir_errxstar  = fullfile(outdir_n, 'error_to_xstar');
+ 
+    for dm = ["exact", "case1", "case2"]
+ 
+        if dm == "exact"
+            k_loop_plot    = NaN;
+            type_loop_plot = 0;
+        else
+            k_loop_plot    = k_list;
+            type_loop_plot = fdtypes;
+        end
+ 
+        for kk = k_loop_plot
+            for type = type_loop_plot
+ 
+                for method = ["modified", "truncated"]
+ 
+                    method_label = method_map(char(method));
+ 
+                    % --- maschera sui risultati per questa combinazione ---
+                    mask = [results.n] == n_target & ...
+                            [results.deriv_mode] == dm & ...
+                            [results.method] == method;
+ 
+                    if dm ~= "exact"
+                        if isnan(kk)
+                            mask = mask & isnan([results.k]);
+                        else
+                            mask = mask & [results.k] == kk;
+                        end
+                        mask = mask & [results.type] == type;
+                    end
+ 
+                    if ~any(mask)
+                        continue; % combinazione non presente nei risultati
+                    end
+ 
+                    xseq_list = {results(mask).xseq};
+                    if all(cellfun(@isempty, xseq_list))
+                        continue; % tutti i run sono falliti (xseq vuoto)
+                    end
+ 
+                    % --- tag univoco ed esplicativo per titoli/nomi file ---
+                    if dm == "exact"
+                        tag = sprintf('%s_exact_n%d', method_label, n_target);
+                    else
+                        if type == 1, typestr = 'h'; else, typestr = 'hi'; end
+                        tag = sprintf('%s_%s_k%d_%s_n%d', method_label, dm, kk, typestr, n_target);
+                    end
+ 
+                    fprintf('--- Grafici per: %s ---\n', tag);
+ 
+                    % Nota: passiamo "tag" (gia' univoco: metodo + deriv_mode
+                    % + k/type + n) come method_name, e 'Broyden31' come
+                    % problem_name fisso. Cosi' il nome file composto da
+                    % ciascuna funzione (<prefisso>_<method>_<problem>)
+                    % resta univoco senza duplicare informazioni. Ogni tipo
+                    % di grafico va nella sua sottocartella.
+                    plot_error_ratio(xseq_list, xstar_n, tag, 'Broyden31', outdir_errratio, 4);
+ 
+                    if n_target == 2
+                        plot_contour_paths(f, xseq_list, tag, 'Broyden31', outdir_contour);
+                    end
+ 
+                    plot_convergence_rate(xseq_list, grad_exact, tag, 'Broyden31', outdir_rate);
+                    plot_error_to_xstar(xseq_list, xstar_n, tag, 'Broyden31', outdir_errxstar);
+ 
+                    close all; % evita di accumulare decine di figure in memoria
+ 
+                end
+            end
+        end
+    end
+end
+ 
+disp('Tutti i grafici sono stati generati e salvati in graphs_broyden31/n<N>/<tipo_grafico>/');
+ 

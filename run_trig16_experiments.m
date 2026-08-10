@@ -17,13 +17,13 @@ fdmodes = ["h", "hi"];
 % finite), segno che kmax=50 e/o btmax non sono sufficienti per quella
 % scala. Da rivedere/ritarare separatamente per n=1e5 prima della
 % versione finale del report.
-params_modified.kmax = 50;  params_modified.c1 = 1e-4;
+params_modified.kmax = 20;  params_modified.c1 = 1e-4;
 params_modified.rho  = 0.5; params_modified.btmax = 10;
-params_modified.beta = 1e-2;
+params_modified.beta = 1e-3;
 
-params_truncated.kmax = 50;  params_truncated.c1 = 1e-3;
-params_truncated.rho  = 0.8; params_truncated.btmax = 40;
-params_truncated.max_cg = 1000;
+params_truncated.kmax = 20;  params_truncated.c1 = 1e-4;
+params_truncated.rho  = 0.3; params_truncated.btmax = 10;
+params_truncated.max_cg = 20;
 
 %% --- Loop principale: n x deriv_mode x k x mode x metodo x starting point ---
 
