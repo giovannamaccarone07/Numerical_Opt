@@ -14,9 +14,9 @@ rng(seed);
 % "exact" -> gradiente e Hessiana esatti
 % "case1" -> gradiente esatto, Hessiana approssimata con differenze finite
 % "case2" -> gradiente e Hessiana entrambi approssimati con differenze finite
-deriv_mode = "case1";
-k_fd    = 12;   % passo FD: h = 10^-k_fd
-type_fd = 2;    % 1 = passo costante (h), 2 = passo relativo (hi)
+deriv_mode = "case2";
+k_fd    = 8;   % passo FD: h = 10^-k_fd
+type_fd = 1;    % 1 = passo costante (h), 2 = passo relativo (hi)
 
 switch deriv_mode
     case "exact"
@@ -47,21 +47,21 @@ rho_levels = [0.3, 0.5, 0.8];
 % Valori di base per i parametri non esplorati inizialmente
 c1_baseline     = 1e-4;
 kmax_baseline   = 10;
-bt_baseline     = 1;
+bt_baseline     = 5;
 max_cg_baseline = 2;
 
 % Livelli di escalation, usati solo se la configurazione base fallisce
 c1_levels     = [1e-4, 1e-3];
 kmax_levels   = [10, 20, 50, 100, 200];
-bt_levels     = [1, 5, 10, 20, 30, 40];
-max_cg_levels = [5, 10, 1e3, 1e4, 1e5];
+bt_levels     = [10, 20, 30, 40];
+max_cg_levels = [5, 10, 1e2, 1e3, 1e4];
 
 % Dimensioni usate nelle due fasi di valutazione
 n_ref1         = 1e3;
 n_starts_ref1  = 15;
 
-n_ref2         = [1e3, 1e4];
-n_starts_ref2  = 15;
+n_ref2         = [2,1e3, 1e4];
+n_starts_ref2  = 5;
 
 % Pesi della loss finale (tempo vs precisione raggiunta)
 w_t = 1;
@@ -118,11 +118,10 @@ while qhead <= numel(queue)
             all_x0(:,s), f, gradf, hessf, ...
             cfg.kmax, tolgrad, cfg.c1, cfg.rho, cfg.bt, cfg.max_cg);
 
-        bt_reached = (~isempty(btseq) && btseq(end) >= cfg.bt);
+        bt_reached = (~isempty(btseq) && any(btseq >= cfg.bt));
         k_reached  = (k >= cfg.kmax);
-        cg_reached = (~isempty(inner_iters) && inner_iters(end) >= cfg.max_cg);
+        cg_reached = (~isempty(inner_iters) && any(inner_iters >= cfg.max_cg));
         converged  = (gradnorm < tolgrad);
-
         if bt_reached
             any_bt_reached = true;
         end
@@ -249,18 +248,12 @@ for i = 1:numel(good_configs)
             end
             t_run = median(t);
 
-            bt_last = 0;
-            if ~isempty(btseq)
-                bt_last = btseq(end);
-            end
-            cg_last = 0;
-            if ~isempty(inner_iters)
-                cg_last = inner_iters(end);
-            end
-
-            if gradnorm >= tolgrad || k >= cfg.kmax || bt_last >= cfg.bt || cg_last >= cfg.max_cg
-                fprintf('  run fallita a n=%d start=%d: gradnorm=%.2e k=%d bt_last=%d cg_last=%d\n', ...
-                    n, s, gradnorm, k, bt_last, cg_last);
+            bt_saturated = ~isempty(btseq) && any(btseq >= cfg.bt);
+            cg_saturated = ~isempty(inner_iters) && any(inner_iters >= cfg.max_cg);
+            
+            if gradnorm >= tolgrad || k >= cfg.kmax || bt_saturated || cg_saturated
+                fprintf('  run fallita a n=%d start=%d: gradnorm=%.2e k=%d bt_sat=%d cg_sat=%d\n', ...
+                    n, s, gradnorm, k, bt_saturated, cg_saturated);
                 success_cfg = false;
                 break;
             end

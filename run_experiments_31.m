@@ -15,19 +15,19 @@ addpath(genpath(project_root));
 seed    = 346710; % <-- UPDATE THIS WITH YOUR TEAM'S MINIMUM ID[cite: 2]
 tolgrad = 1e-6;
 
-n_list  = [2, 1e3]; % Required dimensions[cite: 2]
+n_list  = [2, 1e3, 1e4, 1e5]; % Required dimensions[cite: 2]
 k_list  = [4, 8, 12];         % Required k values for FD[cite: 2]
 fdtypes = [1, 2];             % 1 = constant step (h), 2 = relative step (hi)
 
 % Tuned Parameters for Modified and Truncated Newton
 % (These might need adjustment for n = 1e5 if the algorithm struggles)
-params_modified.kmax = 20;  params_modified.c1 = 1e-4;
-params_modified.rho  = 0.5; params_modified.btmax = 10;
-params_modified.beta = 1e-3;
+params_modified.kmax = 50;  params_modified.c1 = 1e-3;
+params_modified.rho  = 0.5; params_modified.btmax = 20;
+params_modified.beta = 1e-4;
 
-params_truncated.kmax = 20;  params_truncated.c1 = 1e-4;
+params_truncated.kmax = 50;  params_truncated.c1 = 1e-4;
 params_truncated.rho  = 0.3; params_truncated.btmax = 10;
-params_truncated.max_cg = 20;
+params_truncated.max_cg = 100;
 
 % --- Main Loop ---
 results = struct([]);
@@ -77,7 +77,7 @@ for n = n_list
             end
             
             % Loop over optimization methods
-            for method = ["truncated","modified"]
+            for method = ["modified"]
                 if method == "modified"
                     prm = params_modified;
                 else

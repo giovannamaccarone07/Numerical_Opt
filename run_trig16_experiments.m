@@ -1,132 +1,272 @@
 clear; clc; close all;
 
-%% --- Caricamento problema (invariato, gia' verificato) ---
-[f, grad_exact, hess_exact, xbarfun] = problem_trig16();
+% Aggiunge questa cartella e TUTTE le sottocartelle al path
+project_root = fileparts(mfilename('fullpath'));   % cartella dove sta questo script
+addpath(genpath(project_root));
 
-%% --- Parametri fissi ---
-seed    = 346710;     % <-- sostituite col minimo ID reale del vostro team
+
+
+% --- Problem Loading ---
+% problem_trig16 deve restituire 5 output, analogamente a problem_broyden31
+[f, grad_exact, hess_exact, xbarfun, xstarfun] = problem_trig16();
+
+% --- Fixed Parameters ---
+seed    = 346710;
 tolgrad = 1e-6;
 
-n_list  = [2, 1e3, 1e4, 1e5];
-k_list  = [4, 8, 12];
-fdmodes = ["h", "hi"];
+n_list  = [2, 1e3];      % Dimensioni richieste
+k_list  = [4, 8, 12];         % Valori di k per le differenze finite
+fdtypes = [1, 2];             % 1 = passo costante (h), 2 = passo relativo (hi)
 
-% Parametri tarati 
-% ATTENZIONE: i risultati mostrano un calo di successo marcato
-% a n=1e5 anche nel caso "exact" (derivate esatte, senza differenze
-% finite), segno che kmax=50 e/o btmax non sono sufficienti per quella
-% scala. Da rivedere/ritarare separatamente per n=1e5 prima della
-% versione finale del report.
-params_modified.kmax = 20;  params_modified.c1 = 1e-4;
+% Parametri tarati per Modified e Truncated Newton
+params_modified.kmax = 50;  params_modified.c1 = 1e-4;
 params_modified.rho  = 0.5; params_modified.btmax = 10;
-params_modified.beta = 1e-3;
+params_modified.beta = 1e-2;
 
-params_truncated.kmax = 20;  params_truncated.c1 = 1e-4;
-params_truncated.rho  = 0.3; params_truncated.btmax = 10;
-params_truncated.max_cg = 20;
+params_truncated.kmax = 50;  params_truncated.c1 = 1e-3;
+params_truncated.rho  = 0.8; params_truncated.btmax = 40;
+params_truncated.max_cg = 1000;
 
-%% --- Loop principale: n x deriv_mode x k x mode x metodo x starting point ---
-
-%% --- Loop principale: n x deriv_mode x k x mode x metodo x starting point ---
-% Struttura dei casi testati:
-%   "exact" : gradiente e Hessiana esatti (formula chiusa)
-%   "case1" : gradiente esatto, Hessiana approssimata per FD in avanti
-%             (vedi trig_hess_fd_case1.m)
-%   "case2" : gradiente E Hessiana approssimati per FD centrate
-%             (vedi trig_fd_case2.m)
+% --- Main Loop ---
 results = struct([]);
 idx = 0;
 
 for n = n_list
     fprintf('\n========== n = %d ==========\n', n);
 
+    % Generate starting points
     rng(seed + n, 'twister');
-    xb = xbarfun(n);
-    X0 = [xb, xb + (2*rand(n,5) - 1)];   % xbar + 5 punti random
+    xb = xbarfun(n); % Punto di partenza standard (tutti 1)
+    % 5 punti random nell'ipercubo [xb-1, xb+1]
+    X0 = [xb, xb + (2*rand(n,5) - 1)];
 
+    % Test cases: Exact, FD Hessian only, Full FD
     for dm = ["exact", "case1", "case2"]
 
-        if dm == "exact"
-            kvals = NaN; modevals = "none";
-        else
-            kvals = k_list; modevals = fdmodes;
-        end
+    % Determine which k and type values to loop over
+    if dm == "exact"
+        k_loop = [NaN];
+        type_loop = [0];
+    else
+        k_loop = k_list;
+        type_loop = fdtypes;
+    end
 
-        for kk = kvals
-            for mm = modevals
+    for kk = k_loop
+        for type = type_loop
 
-                % --- Selezione gradf/hessf in base al caso ---
-                switch dm
-                    case "exact"
-                        gradf = grad_exact;
-                        hessf = hess_exact;
-                    case "case1"
-                        gradf = grad_exact;
-                        hessf = @(x) trig_hess_fd_case1(grad_exact, x, kk, mm);
-                    case "case2"
-                        gradf = @(x) trig_fd_case2_grad_only(x, kk, mm);
-                        hessf = @(x) trig_fd_case2_hess_only(x, kk, mm);
+            % --- Dynamic function selection ---
+            switch dm
+                case "exact"
+                    gradf = grad_exact;
+                    hessf = hess_exact;
+                case "case1"
+                    % Gradiente esatto, Hessiana approssimata per FD (ibrido)
+                    gradf = grad_exact;
+                    hessf = @(x) trig_hess_fd_case1(grad_exact, x, kk, type);
+                case "case2"
+                    % FD completo: gradiente e Hessiana approssimati per FD
+                    gradf = @(x) trig_fd_case2_grad_only(x, kk, type);
+                    hessf = @(x) trig_fd_case2_hess_only(x, kk, type);
+            end
+
+            % Loop over optimization methods
+            for method = ["modified", "truncated"]
+                if method == "modified"
+                    prm = params_modified;
+                else
+                    prm = params_truncated;
                 end
 
-                for method = ["modified", "truncated"]
-                    if method == "modified"
-                        prm = params_modified;
-                    else
-                        prm = params_truncated;
-                    end
-
-                    for s = 1:6
-                        x0 = X0(:, s);
-                        tic;
-                        try
-                            if method == "modified"
-                                [~, fk, gn, it, xseq] = modified_newton_method(x0, f, ...
-                                    gradf, hessf, prm.kmax, tolgrad, prm.c1, prm.rho, ...
-                                    prm.btmax, prm.beta);
-                            else
-                                [~, fk, gn, it, xseq] = truncated_newton_method(x0, f, ...
-                                    gradf, hessf, prm.kmax, tolgrad, prm.c1, prm.rho, ...
-                                    prm.btmax, prm.max_cg);
-                            end
-                        catch ME
-                            fk = NaN; gn = Inf; it = 0; xseq = [];
-                            warning('Fallito (%s,%s,n=%d,k=%s,%s): %s', ...
-                                     method, dm, n, string(kk), mm, ME.message);
-                        end
-                        t = toc;
-
-                        rate = estimate_rate(xseq, grad_exact);  % sempre col gradiente esatto
-                        succ = gn < tolgrad;
-
-                        idx = idx + 1;
-                        results(idx).n = n;
-                        results(idx).deriv_mode = dm;
-                        results(idx).k = kk;
-                        results(idx).mode = mm;
-                        results(idx).method = method;
-                        results(idx).start = s;
-                        results(idx).iter = it;
-                        results(idx).gradnorm = gn;
-                        results(idx).success = succ;
-                        results(idx).rate = rate;
-                        results(idx).time = t;
-
-                        % --- Conversione sicura di k per la stampa (NaN nel caso "exact") ---
-                        if isnan(kk)
-                            kstr = "n/a";
+                % Loop over the 6 starting points (1 standard + 5 random)
+                for s = 1:6
+                    x0 = X0(:, s);
+                    tic;
+                    try
+                        if method == "modified"
+                            [~, fk, gn, it, xseq] = modified_newton_method(x0, f, ...
+                                gradf, hessf, prm.kmax, tolgrad, prm.c1, prm.rho, ...
+                                prm.btmax, prm.beta);
                         else
-                            kstr = string(kk);
+                            [~, fk, gn, it, xseq,~,~,inner] = truncated_newton_method(x0, f, ...
+                                gradf, hessf, prm.kmax, tolgrad, prm.c1, prm.rho, ...
+                                prm.btmax, prm.max_cg);
                         end
-
-                        fprintf('%-9s | %-6s | n=%-6d | k=%-4s | %-3s | start=%d | iter=%3d | gn=%.2e | succ=%d | rate=%.2f | t=%.2fs\n', ...
-                            method, dm, n, kstr, mm, s, it, gn, succ, rate, t);
+                    catch ME
+                        fk = NaN; gn = Inf; it = 0; xseq = [];
+                        warning('Failed (%s, %s, n=%d, k=%g, type=%d): %s', ...
+                            char(method), char(dm), n, kk, type, ME.message);
                     end
+                    t = toc;
+
+                    % Rate calcolato sempre col gradiente esatto, per coerenza
+                    rate = estimate_rate(xseq, grad_exact);
+                    succ = gn < tolgrad;
+
+                    % Save results
+                    idx = idx + 1;
+                    results(idx).n = n;
+                    results(idx).deriv_mode = dm;
+                    results(idx).k = kk;
+                    results(idx).type = type;
+                    results(idx).method = method;
+                    results(idx).start = s;
+                    results(idx).iter = it;
+                    results(idx).gradnorm = gn;
+                    results(idx).success = succ;
+                    results(idx).rate = rate;
+                    results(idx).time = t;
+                    results(idx).xseq = xseq;
+
+                    % --- Safe formatting for printing ---
+                    if isnan(kk)
+                        kstr = "n/a";
+                        typestr = "n/a";
+                    else
+                        kstr = string(kk);
+                        if type == 1, typestr = "h"; else, typestr = "hi"; end
+                    end
+
+                    fprintf('%-9s | %-6s | n=%-6d | k=%-4s | %-3s | start=%d | iter=%3d | gn=%.2e | succ=%d | rate=%.2f | t=%.2fs\n', ...
+                        method, dm, n, kstr, typestr, s, it, gn, succ, rate, t);
                 end
             end
         end
     end
 end
+end
 
-%% --- Salvataggio ---
+% --- Save Results ---
 save('trig16_fd_results.mat', 'results');
-disp('Fatto. Risultati salvati in trig16_fd_results.mat');
+disp('Done. Results saved in trig16_fd_results.mat');
+
+%% --- Esempio: grafico per Truncated Newton, esatto, n=2 ---
+n_target = 2;
+mask = [results.n] == n_target & [results.deriv_mode]=="exact" & ...
+        [results.method]== "truncated";
+
+xseq_list = {results(mask).xseq};
+xstar_n = xstarfun(n_target);
+
+plot_error_ratio(xseq_list, xstar_n, 'TruncatedNewton', 'Trig16', 'graphs_trig16', 4);
+for s = 1:6
+    x_final = xseq_list{s}(:, end);
+    fprintf('start %d: f(x_final)=%.6e, f(xstar)=%.6e, ||x_final-xstar||=%.4f\n', ...
+        s, f(x_final), f(xstar_n), norm(x_final - xstar_n));
+end
+
+% --- Grafici aggiuntivi ---
+if n_target == 2
+    plot_contour_paths(f, xseq_list, 'ModifiedNewton', 'Trig16', 'graphs_trig16');
+end
+plot_convergence_rate(xseq_list, grad_exact, 'ModifiedNewton', 'Trig16', 'graphs_trig16');
+plot_convergence_rate_trig16(xseq_list, 'ModifiedNewton', 'Trig16', 'graphs_trig16');
+plot_error_to_xstar(xseq_list, xstar_n, 'ModifiedNewton', 'Trig16', 'graphs_trig16');
+for s = 1:6
+    x_final = xseq_list{s}(:, end);
+    fprintf('start %d: f(x_final)=%.6e, f(xstar)=%.6e, ||x_final-xstar||=%.4f\n', ...
+        s, f(x_final), f(xstar_n), norm(x_final - xstar_n));
+end
+ 
+ 
+ 
+%% --- Generazione automatica dei grafici per TUTTE le combinazioni ---
+% Stessa logica di run_experiments_31.m: per ogni n, deriv_mode
+% (e k/type quando applicabile) e method, genera:
+%   - plot_error_ratio        (sempre)
+%   - plot_contour_paths      (solo per n = 2)
+%   - plot_convergence_rate   (sempre)
+%   - plot_error_to_xstar     (sempre)
+%
+% I grafici finiscono in graphs_trig16/n<N>/, con nomi di file
+% univoci tipo:
+%   TruncatedNewton_case2_k8_hi_n1000_...
+%   ModifiedNewton_exact_n2_...
+method_map = containers.Map({'modified','truncated'}, ...
+                             {'ModifiedNewton','TruncatedNewton'});
+ 
+base_outdir = 'graphs_trig16';
+ 
+old_visible_state = get(0, 'DefaultFigureVisible');
+set(0, 'DefaultFigureVisible', 'off');
+restore_visibility = onCleanup(@() set(0, 'DefaultFigureVisible', old_visible_state));
+ 
+for n_target = n_list
+ 
+    xstar_n = xstarfun(n_target);
+    outdir_n = fullfile(base_outdir, sprintf('n%d', n_target));
+ 
+    outdir_contour       = fullfile(outdir_n, 'contour');
+    outdir_rate          = fullfile(outdir_n, 'convergence_rate');
+    outdir_rate_iterdiff = fullfile(outdir_n, 'convergence_rate_iterdiff');
+    outdir_errratio      = fullfile(outdir_n, 'error_ratio');
+    outdir_errxstar      = fullfile(outdir_n, 'error_to_xstar');
+ 
+    for dm = ["exact", "case1", "case2"]
+ 
+        if dm == "exact"
+            k_loop_plot    = NaN;
+            type_loop_plot = 0;
+        else
+            k_loop_plot    = k_list;
+            type_loop_plot = fdtypes;
+        end
+ 
+        for kk = k_loop_plot
+            for type = type_loop_plot
+ 
+                for method = ["modified", "truncated"]
+ 
+                    method_label = method_map(char(method));
+ 
+                    mask = [results.n] == n_target & ...
+                            [results.deriv_mode] == dm & ...
+                            [results.method] == method;
+ 
+                    if dm ~= "exact"
+                        if isnan(kk)
+                            mask = mask & isnan([results.k]);
+                        else
+                            mask = mask & [results.k] == kk;
+                        end
+                        mask = mask & [results.type] == type;
+                    end
+ 
+                    if ~any(mask)
+                        continue;
+                    end
+ 
+                    xseq_list = {results(mask).xseq};
+                    if all(cellfun(@isempty, xseq_list))
+                        continue;
+                    end
+ 
+                    if dm == "exact"
+                        tag = sprintf('%s_exact_n%d', method_label, n_target);
+                    else
+                        if type == 1, typestr = 'h'; else, typestr = 'hi'; end
+                        tag = sprintf('%s_%s_k%d_%s_n%d', method_label, dm, kk, typestr, n_target);
+                    end
+ 
+                    fprintf('--- Grafici per: %s ---\n', tag);
+ 
+                    %plot_error_ratio(xseq_list, xstar_n, tag, 'Trig16', outdir_errratio, 4);
+ 
+                    if n_target == 2
+                        plot_contour_paths(f, xseq_list, tag, 'Trig16', outdir_contour);
+                    end
+ 
+                    plot_convergence_rate(xseq_list, grad_exact, tag, 'Trig16', outdir_rate);
+                    plot_convergence_rate_trig16(xseq_list, tag, 'Trig16', outdir_rate_iterdiff);
+                    %plot_error_to_xstar(xseq_list, xstar_n, tag, 'Trig16', outdir_errxstar);
+ 
+                    close all;
+ 
+                end
+            end
+        end
+    end
+end
+ 
+disp('Tutti i grafici sono stati generati e salvati in graphs_trig16/n<N>/<tipo_grafico>/');
+ 

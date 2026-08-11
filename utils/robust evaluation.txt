@@ -1,0 +1,59 @@
+TRUNCATED=== REFINEMENT 2: robust evaluation (n = [2 1000 10000]; 5 starts each) ===
+
+Evaluating config #1: rho=0.3 c1=1e-04 kmax=50 bt=10 max_cg=100
+  mantenuta in REF2: loss=1.2783e+01
+
+Evaluating config #2: rho=0.3 c1=1e-03 kmax=50 bt=5 max_cg=100
+  run fallita a n=1000 start=5: gradnorm=3.52e-06 k=50 bt_sat=1 cg_sat=0
+  scartata in REF2 (non robusta)
+
+Evaluating config #3: rho=0.5 c1=1e-04 kmax=50 bt=20 max_cg=100
+  mantenuta in REF2: loss=1.4067e+01
+
+Evaluating config #4: rho=0.5 c1=1e-03 kmax=100 bt=20 max_cg=100
+  mantenuta in REF2: loss=2.4254e+01
+
+Evaluating config #5: rho=0.8 c1=1e-03 kmax=50 bt=40 max_cg=100
+  run fallita a n=10000 start=2: gradnorm=1.71e-05 k=50 bt_sat=0 cg_sat=0
+  scartata in REF2 (non robusta)
+
+=== SELEZIONE FINALE: top 10% (loss <= 12.78) ===
+1) rho=0.3 c1=1e-04 kmax=50 bt=10 max_cg=100 loss=1.2783e+01
+
+
+
+
+MODIFIED  === REFINEMENT 2: robust evaluation (n = [2 1000 10000]; 5 starts each) ===
+
+Evaluating config #1: rho=0.3 beta=0.0001 c1=1e-04 kmax=50 bt=10
+  mantenuta in REF2: loss=1.4341e+01
+
+Evaluating config #3: rho=0.3 beta=0.001 c1=1e-04 kmax=50 bt=10
+  mantenuta in REF2: loss=1.6983e+01
+
+Evaluating config #4: rho=0.3 beta=0.001 c1=1e-03 kmax=50 bt=5
+  mantenuta in REF2: loss=1.8187e+01
+
+Evaluating config #6: rho=0.3 beta=0.01 c1=1e-03 kmax=50 bt=5
+  mantenuta in REF2: loss=1.5713e+01
+
+Evaluating config #7: rho=0.5 beta=0.001 c1=1e-04 kmax=50 bt=10
+  mantenuta in REF2: loss=1.7565e+01
+
+Evaluating config #10: rho=0.5 beta=0.0001 c1=1e-03 kmax=50 bt=10
+  mantenuta in REF2: loss=1.350e+01
+
+Evaluating config #11: rho=0.5 beta=0.01 c1=1e-04 kmax=50 bt=20
+  mantenuta in REF2: loss=1.7471e+01
+
+Evaluating config #13: rho=0.5 beta=0.001 c1=1e-03 kmax=50 bt=20
+  mantenuta in REF2: loss=1.8715e+01
+
+Evaluating config #17: rho=0.8 beta=0.001 c1=1e-04 kmax=100 bt=40
+  mantenuta in REF2: loss=4.1262e+01
+
+Evaluating config #19: rho=0.8 beta=0.01 c1=1e-03 kmax=50 bt=40
+  mantenuta in REF2: loss=1.9455e+01
+
+=== SELEZIONE FINALE: top 10% (loss <= 13.95) ===
+1) beta=0.0001 rho=0.5 c1=1e-03 kmax=50 bt=10 loss=1.3550e+01

@@ -14,9 +14,9 @@ rng(seed);
 % "exact" -> gradiente e Hessiana esatti
 % "case1" -> gradiente esatto, Hessiana approssimata con differenze finite
 % "case2" -> gradiente e Hessiana entrambi approssimati con differenze finite
-deriv_mode = "case1";
-k_fd    = 12;   % passo FD: h = 10^-k_fd
-type_fd = 2;    % 1 = passo costante (h), 2 = passo relativo (hi)
+deriv_mode = "case2";
+k_fd    = 8;   % passo FD: h = 10^-k_fd
+type_fd = 1;    % 1 = passo costante (h), 2 = passo relativo (hi)
 
 switch deriv_mode
     case "exact"
@@ -53,14 +53,14 @@ bt_baseline   = 1;
 % Livelli di escalation, usati solo se la configurazione base fallisce
 c1_levels   = [1e-4, 1e-3];
 kmax_levels = [10, 20, 50, 100, 200];
-bt_levels   = [1, 5, 10, 20, 30, 40];
+bt_levels   = [5, 10, 20, 30, 40];
 
 % Dimensioni usate nelle due fasi di valutazione
 n_ref1         = 1e3;
 n_starts_ref1  = 15;
 
-n_ref2         = [1e3, 1e4];
-n_starts_ref2  = 15;
+n_ref2         = [2,1e3, 1e4];
+n_starts_ref2  = 5;
 
 % Pesi della loss finale (tempo vs precisione raggiunta)
 w_t = 1;
