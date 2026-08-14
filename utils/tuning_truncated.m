@@ -8,14 +8,15 @@ seed = 346710;
 rng(seed);
 
 % ---------------- Problem ----------------
-[f, grad_exact, hess_exact, xbar_gen, rfun, ~] = problem_broyden31();
+%[f, grad_exact, hess_exact, xbar_gen, rfun, ~] = problem_broyden31();
+[f, grad_exact, hess_exact, xbar_gen, xstarfun] = problem_trig16();
 
 % ---------------- Modalita' di derivazione ----------------
 % "exact" -> gradiente e Hessiana esatti
 % "case1" -> gradiente esatto, Hessiana approssimata con differenze finite
 % "case2" -> gradiente e Hessiana entrambi approssimati con differenze finite
 deriv_mode = "case2";
-k_fd    = 8;   % passo FD: h = 10^-k_fd
+k_fd    = 4;   % passo FD: h = 10^-k_fd
 type_fd = 1;    % 1 = passo costante (h), 2 = passo relativo (hi)
 
 switch deriv_mode
@@ -24,10 +25,13 @@ switch deriv_mode
         hessf = hess_exact;
     case "case1"
         gradf = grad_exact;
-        hessf = @(x) hess_fd_broyden31(grad_exact, x, k_fd, type_fd);
+        %hessf = @(x) hess_fd_broyden31(grad_exact, x, k_fd, type_fd);
+        hessf = @(x) trig_hess_fd_case1(grad_exact, x, k_fd, type_fd);
     case "case2"
-        gradf = @(x) grad_fd_broyden31(x, k_fd, type_fd, rfun);
-        hessf = @(x) hess_grad_fd_broyden31(x, k_fd, type_fd, rfun);
+        %gradf = @(x) grad_fd_broyden31(x, k_fd, type_fd, rfun);
+        %hessf = @(x) hess_grad_fd_broyden31(x, k_fd, type_fd, rfun);
+        gradf = @(x) trig_fd_case2_grad_only(x, k_fd, type_fd);
+        hessf = @(x) trig_fd_case2_hess_only(x, k_fd, type_fd);
     otherwise
         error('deriv_mode non riconosciuto: %s', deriv_mode);
 end
@@ -52,15 +56,15 @@ max_cg_baseline = 2;
 
 % Livelli di escalation, usati solo se la configurazione base fallisce
 c1_levels     = [1e-4, 1e-3];
-kmax_levels   = [10, 20, 50, 100, 200];
+kmax_levels   = [10, 50, 100, 200,500,1000];
 bt_levels     = [10, 20, 30, 40];
 max_cg_levels = [5, 10, 1e2, 1e3, 1e4];
 
 % Dimensioni usate nelle due fasi di valutazione
-n_ref1         = 1e3;
-n_starts_ref1  = 15;
+n_ref1         = 1e4;
+n_starts_ref1  = 5;
 
-n_ref2         = [2,1e3, 1e4];
+n_ref2         = [2,1e3,1e4];
 n_starts_ref2  = 5;
 
 % Pesi della loss finale (tempo vs precisione raggiunta)
@@ -251,7 +255,7 @@ for i = 1:numel(good_configs)
             bt_saturated = ~isempty(btseq) && any(btseq >= cfg.bt);
             cg_saturated = ~isempty(inner_iters) && any(inner_iters >= cfg.max_cg);
             
-            if gradnorm >= tolgrad || k >= cfg.kmax || bt_saturated || cg_saturated
+            if gradnorm >= tolgrad && ( k >= cfg.kmax || bt_saturated || cg_saturated)
                 fprintf('  run fallita a n=%d start=%d: gradnorm=%.2e k=%d bt_sat=%d cg_sat=%d\n', ...
                     n, s, gradnorm, k, bt_saturated, cg_saturated);
                 success_cfg = false;

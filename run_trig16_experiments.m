@@ -14,7 +14,7 @@ addpath(genpath(project_root));
 seed    = 346710;
 tolgrad = 1e-6;
 
-n_list  = [2, 1e3];      % Dimensioni richieste
+n_list  = [2, 1e3, 1e4,1e5];      % Dimensioni richieste
 k_list  = [4, 8, 12];         % Valori di k per le differenze finite
 fdtypes = [1, 2];             % 1 = passo costante (h), 2 = passo relativo (hi)
 
@@ -23,8 +23,8 @@ params_modified.kmax = 50;  params_modified.c1 = 1e-4;
 params_modified.rho  = 0.5; params_modified.btmax = 10;
 params_modified.beta = 1e-2;
 
-params_truncated.kmax = 50;  params_truncated.c1 = 1e-3;
-params_truncated.rho  = 0.8; params_truncated.btmax = 40;
+params_truncated.kmax = 200;  params_truncated.c1 = 1e-4;
+params_truncated.rho  = 0.8; params_truncated.btmax = 50;
 params_truncated.max_cg = 1000;
 
 % --- Main Loop ---
