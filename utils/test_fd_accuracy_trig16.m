@@ -20,7 +20,7 @@ addpath(genpath(project_root));
 
 [f, grad_exact, hess_exact, xbar_gen] = problem_trig16(); %#ok<ASGLU>
 
-n = 1e5;
+n = 1e4;
 
 % Punto di test: NON il minimo, ma un punto "tipico" incontrato durante
 % l'ottimizzazione, cosi' il test e' rappresentativo di cosa vede

@@ -14,7 +14,7 @@ addpath(genpath(project_root));
 seed    = 346710;
 tolgrad = 1e-6;
 
-n_list  = [2, 1e3, 1e4,1e5];      % Dimensioni richieste
+n_list  = [1e4];      % Dimensioni richieste
 k_list  = [4, 8, 12];         % Valori di k per le differenze finite
 fdtypes = [1, 2];             % 1 = passo costante (h), 2 = passo relativo (hi)
 
@@ -157,11 +157,11 @@ end
 
 % --- Grafici aggiuntivi ---
 if n_target == 2
-    plot_contour_paths(f, xseq_list, 'ModifiedNewton', 'Trig16', 'graphs_trig16');
+    plot_contour_paths(f, xseq_list, 'TruncatedNewton', 'Trig16', 'graphs_trig16');
 end
-plot_convergence_rate(xseq_list, grad_exact, 'ModifiedNewton', 'Trig16', 'graphs_trig16');
-plot_convergence_rate_trig16(xseq_list, 'ModifiedNewton', 'Trig16', 'graphs_trig16');
-plot_error_to_xstar(xseq_list, xstar_n, 'ModifiedNewton', 'Trig16', 'graphs_trig16');
+%plot_convergence_rate(xseq_list, grad_exact, 'TruncatedNewton', 'Trig16', 'graphs_trig16');
+plot_convergence_rate_trig16(xseq_list, 'TruncatedNewton', 'Trig16', 'graphs_trig16',4);
+%plot_error_to_xstar(xseq_list, xstar_n, 'TruncatedNewton', 'Trig16', 'graphs_trig16');
 for s = 1:6
     x_final = xseq_list{s}(:, end);
     fprintf('start %d: f(x_final)=%.6e, f(xstar)=%.6e, ||x_final-xstar||=%.4f\n', ...
@@ -199,6 +199,7 @@ for n_target = n_list
     outdir_contour       = fullfile(outdir_n, 'contour');
     outdir_rate          = fullfile(outdir_n, 'convergence_rate');
     outdir_rate_iterdiff = fullfile(outdir_n, 'convergence_rate_iterdiff');
+    outdir_rate_compare = fullfile(outdir_n, 'convergence_rate_compare');
     outdir_errratio      = fullfile(outdir_n, 'error_ratio');
     outdir_errxstar      = fullfile(outdir_n, 'error_to_xstar');
  
@@ -253,13 +254,13 @@ for n_target = n_list
                     %plot_error_ratio(xseq_list, xstar_n, tag, 'Trig16', outdir_errratio, 4);
  
                     if n_target == 2
-                        plot_contour_paths(f, xseq_list, tag, 'Trig16', outdir_contour);
+                        %plot_contour_paths(f, xseq_list, tag, 'Trig16', outdir_contour);
                     end
  
-                    plot_convergence_rate(xseq_list, grad_exact, tag, 'Trig16', outdir_rate);
-                    plot_convergence_rate_trig16(xseq_list, tag, 'Trig16', outdir_rate_iterdiff);
+                    %plot_convergence_rate(xseq_list, grad_exact, tag, 'Trig16', outdir_rate,4);
+                    %plot_convergence_rate_trig16(xseq_list, tag, 'Trig16', outdir_rate_iterdiff,3);
                     %plot_error_to_xstar(xseq_list, xstar_n, tag, 'Trig16', outdir_errxstar);
- 
+                    plot_gradnorm_vs_reference(xseq_list, grad_exact, tag, 'Trig16', outdir_rate_compare,5);
                     close all;
  
                 end
