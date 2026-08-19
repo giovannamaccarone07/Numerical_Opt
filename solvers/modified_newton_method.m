@@ -2,28 +2,25 @@ function [xk,fk,gradfk_norm,k,xseq,btseq,alphas,gradfk_seq,fk_seq,tau_new,pks] =
 
 % MODIFIED_NEWTON_METHOD  Modified Newton method with Hessian correction
 %
-%   [xk, fk, gradfk_norm, k, xseq, btseq, tau_new,alphas,pks] = ...
-%       modified_newton_method(x0, f, gradf, hessf, kmax, tolgrad, c1, rho, btmax, beta)
-%
-%       This functions is aimed to solve large scale numerical optimization
-%       problems using the modified Newton method with backtracking techniques.
+%   This functions is aimed to solve large scale numerical optimization
+%   problems using the modified Newton method with backtracking techniques.
 %
 %   INPUT ARGUMENTS:
 %       x0              : initial point (column vector)
-%       f               : function handle for the scalar objective function f(x)
+%       f               : function handle for objective function f(x)
 %       gradf           : function handle for the gradient gradf(x)
 %       hessf           : function handle for the Hessian hessf(x)
 %       kmax            : maximum number of iterations
-%       tolgrad         : tolerance on the gradient norm for the stopping condition
+%       tolgrad         : tolerance on the gradient norm for the stopping criterion
 %       c1, rho, btmax  : parameters for Armijo/backtracking (0 < c1 < 1, 0 < rho < 1)
 %       beta            : minimum initial increment for the Hessian correction (beta > 0)
 %
 %   OUTPUT ARGUMENTS:
-%       xk, fk, gradfk_norm  : final point, objective value, gradient norm at the solution
+%       xk, fk, gradfk_norm  : final point, objective value and gradient norm at the solution
 %       k                    : number of iterations performed
 %       xseq                 : sequence of iterates [x0, x1, ..., xk]  (n × (k+1))
-%       btseq                : number of backtracking steps at each iteration (1 × k)
-%       tau_new              : (maxit+1) × k matrix storing the tau values used at each iteration
+%       btseq                : number of backtracking steps at each iteration 
+%       tau_new              : matrix storing the tau values used at each iteration
 %       alphas               : step lengths
 %       pks                  : search directions
 
@@ -143,7 +140,7 @@ while k < kmax && gradfk_norm >= tolgrad
     % Once the parameter tau is found then the correction of the hessian 
     % can be built.
     % In order to check if the corrected matrix is positive definite, we 
-    % attempt to perform the incomplete choleski factorization: 
+    % attempt to perform the incomplete Choleski factorization: 
     % if Bk is not positive definite, then we get an error and consequently
     % we must try to improve it.
     for j = 1:maxit
@@ -157,15 +154,12 @@ while k < kmax && gradfk_norm >= tolgrad
             % Cholesky factorization.
             [R,flag] = chol(Bk);
 
-            % Chech if the correction is good enough (Is Bk positive
-            % definite?).
+            % Check if the correction is good enough (Is Bk positive definite?).
             if flag == 0
-                %fprintf('Bk is positive definite k: %d iteration j: %d\n', k, j);
                 break
             else
                 % If the Bk in not positive definite, then we need to correct it.
                 tauk(j+1) = max(beta, 2*tauk(j)); 
-                %fprintf('Bk is NOT positive definite k: %d iteration j: %d\n', k, j);
             end
     end
 
@@ -175,9 +169,9 @@ while k < kmax && gradfk_norm >= tolgrad
     
 
 
-    % BACKTRACKING.
+    % BACKTRACKING
     
-    alpha = 1; % Reset the value of alpha (parameter used for linesearch).
+    alpha = 1; % Reset the value of alpha (parameter used for line-search).
     xnew = xk + alpha * pk;   % Computing the candidate solution at step k.
     fnew = f(xnew);
     c1_gradfk_pk = c1 * gradfk' * pk;
@@ -192,9 +186,8 @@ while k < kmax && gradfk_norm >= tolgrad
     end
 
 
-    % Check if the maximum number of backtracking iterations is reached.
+    % Check if the maximum number of backtracking iterations is reached
     if bt == btmax && fnew > farmijo(fk, alpha, c1_gradfk_pk)
-        disp('Maximum backtracking iterations reached, stopping.');
         k = k+1;
         xseq(:, k)      = xk;
         btseq(k)        = bt;
