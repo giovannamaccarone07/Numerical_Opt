@@ -1,15 +1,15 @@
-function [xk,fk,gradfk_norm,k,xseq,btseq,pks,inner_iters] = truncated_newton_method(x0,f,gradf,hessf,kmax,tolgrad,c1,rho,btmax,max_cg) 
+function [xk,fk,gradfk_norm,k,xseq,btseq,pks,inner_iters] = truncated_hess_free(x0,f,gradf,kmax,tolgrad,c1,rho,btmax,max_cg,h_fd) 
 
-% TRUNCATED_NEWTON_METHOD Truncated Newton method (Newton-CG)
+% TRUNCATED_NEWTON_METHOD Truncated Newton method, matrix-free
 %
 %   This function solves unconstrained numerical optimization problems 
-%   using a Truncated Newton approach.
+%   using a Truncated Newton approach. 
 %
 %   INPUT ARGUMENTS:
 %       x0              : Initial point (column vector)
 %       f               : Function handle for the objective function f(x)
 %       gradf           : Function handle for the gradient gradf(x)
-%       hessf           : Function handle for the Hessian matrix H(x)
+%       h_fd            : finite-difference step for the Hessian-vector product
 %       kmax            : Maximum number of outer iterations
 %       tolgrad         : Stopping tolerance on the gradient norm for the stopping criterion
 %       c1, rho, btmax  : parameters for Armijo/backtracking (0 < c1 < 1, 0 < rho < 1)
@@ -59,18 +59,6 @@ if ~isnumeric(gradfk) || ~isequal(size(gradfk),[n,1])
     error('gradf(x) must return a column vector of the same size as x.');
 end
 
-if ~isa(hessf,'function_handle')
-    error('hessf must be a function handle.');
-end
-try
-    H0 = hessf(xk);
-catch
-    error('hessf(x0) cannot be evaluated.');
-end
-if ~isnumeric(H0) || ~isequal(size(H0),[n,n])
-    error('hessf(x) must return an n-by-n matrix.');
-end
-
 if ~isscalar(kmax) || kmax <= 0 || floor(kmax) ~= kmax
     error('kmax must be a positive integer.');
 end
@@ -95,6 +83,10 @@ if ~isscalar(max_cg) || max_cg <= 0
     error('max_cg must be a positive scalar.');
 end
 
+if nargin < 10 || isempty(h_fd)
+    h_fd = sqrt(eps);
+end
+
 gradfk_norm = norm(gradfk);
 if gradfk_norm < tolgrad
     warning('Initial point already satisfies the stopping criterion.');
@@ -105,7 +97,7 @@ end
 farmijo = @(fk, alpha, c1_gradfk_pk) ...
     fk + alpha * c1_gradfk_pk;
 
-% Preallocation
+% Preallocations
 xseq        = zeros(length(x0), kmax+1);
 btseq       = zeros(1, kmax);
 alphas      = zeros(1, kmax);
@@ -121,9 +113,9 @@ while k < kmax && gradfk_norm >= tolgrad
 
     eta_k = min(0.5, sqrt(gradfk_norm))*gradfk_norm;
 
-    % The system we need  to solve is Hess(fk)*pk = -graf(fk) <-> Hk*z=ck
+    % The system we need to solve is Hess(fk)*pk = -graf(fk) <-> Hk*z=ck
+    Hv = @(p) hess_vec_fd(xk, p, gradf, gradfk, h_fd);
     z = zeros(length(x0),1); 
-    Hk = hessf(xk);
     rk =gradfk;
     dk = -rk;
 
@@ -136,11 +128,11 @@ while k < kmax && gradfk_norm >= tolgrad
     j = 0;
     while ~stop_inner && j < max_cg % Inner loop for solving the system with CG.
 
-        Hdk = Hk*dk;
+        Hdk = Hv(dk);
         curv = dk'*Hdk;
         
         % If the curvature is not positive we stop (negative curvature / numerical noise).
-        if curv <= 1e-10 * norm(dk)^2     
+        if curv <= 1e-10 * norm(dk)^2    
             if j == 0
                 p_tn = -gradfk;                
             else
@@ -243,3 +235,27 @@ btseq  = btseq(1:k);
 pks    = pks(:, 1:k);
 inner_iters = inner_iters(:,1:k);
 end %function end
+
+
+
+
+
+
+function Hp = hess_vec_fd(xk, p, gradf, gradfk, h_fd)
+% HESS_VEC_FD Approximates the Hessian-vector product H(xk)*p via a
+% finite difference on the gradient, without ever building H explicitly.
+%
+%   Hp = ( gradf(xk + h*p) - gradf(xk) ) / h
+%
+% The step h is scaled by the norm of p and the scale of xk to keep
+% good numerical accuracy even when p is very small or very large.
+
+normp = norm(p);
+if normp < eps
+    Hp = zeros(size(p));
+    return;
+end
+h = h_fd * max(1, norm(xk)) / normp;
+
+Hp = (gradf(xk + h*p) - gradfk) / h;
+end

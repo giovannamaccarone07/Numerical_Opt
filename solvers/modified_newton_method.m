@@ -1,7 +1,6 @@
 function [xk,fk,gradfk_norm,k,xseq,btseq,alphas,gradfk_seq,fk_seq,tau_new,pks] = modified_newton_method(x0,f,gradf,hessf,kmax,tolgrad,c1,rho,btmax,beta)
 
-% MODIFIED_NEWTON_METHOD  Modified Newton method with Hessian correction
-%
+% MODIFIED_NEWTON_METHOD  Modified Newton method 
 %   This functions is aimed to solve large scale numerical optimization
 %   problems using the modified Newton method with backtracking techniques.
 %
@@ -18,7 +17,7 @@ function [xk,fk,gradfk_norm,k,xseq,btseq,alphas,gradfk_seq,fk_seq,tau_new,pks] =
 %   OUTPUT ARGUMENTS:
 %       xk, fk, gradfk_norm  : final point, objective value and gradient norm at the solution
 %       k                    : number of iterations performed
-%       xseq                 : sequence of iterates [x0, x1, ..., xk]  (n × (k+1))
+%       xseq                 : sequence of points generated [x0, x1, ..., xk]  (n × (k+1))
 %       btseq                : number of backtracking steps at each iteration 
 %       tau_new              : matrix storing the tau values used at each iteration
 %       alphas               : step lengths

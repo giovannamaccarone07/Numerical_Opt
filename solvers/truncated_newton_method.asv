@@ -126,12 +126,12 @@ while k < kmax && gradfk_norm >= tolgrad
     Hk = hessf(xk);
     rk =gradfk;
     dk = -rk;
-
+ 
     r_old = rk'*rk;
+    %dk = r; % d is the conjugate direction, at the first iteration z = 0 so dk = ck.
 
-    % Boolean variable used to understand whether the inner loop got to convergence,
-    % it has to go back to false at each iteration k.
-    stop_inner = false; 
+    stop_inner = false; % Boolean variable used to understand whether the inner loop got to convergence,
+                        % it has to go back to false at each iteration k.
     
     j = 0;
     while ~stop_inner && j < max_cg % Inner loop for solving the system with CG.
@@ -139,8 +139,8 @@ while k < kmax && gradfk_norm >= tolgrad
         Hdk = Hk*dk;
         curv = dk'*Hdk;
         
-        % If the curvature is not positive we stop (negative curvature / numerical noise).
-        if curv <= 1e-10 * norm(dk)^2     
+        % If the curvature is positive we can proceed with CG method.
+        if curv <= 1e-10 * norm(dk)^2 %* norm(Hk, 'fro')   % soglia relativa alla scala della matrice    
             if j == 0
                 p_tn = -gradfk;                
             else
@@ -152,11 +152,11 @@ while k < kmax && gradfk_norm >= tolgrad
         else
             alpha_j = r_old/curv;
             z = z + alpha_j * dk;
-            rk = rk + alpha_j * Hdk;
+            rk = rk + alpha_j * Hdk; %!!!!!!!!!!11 +++++ ?
 
             % Checking convergence.
             if norm(rk) <= eta_k 
-                p_tn = z;       
+                p_tn = z;       %% ridondante?? 
                 %stop_inner = true;
                 break;
             end
@@ -166,7 +166,7 @@ while k < kmax && gradfk_norm >= tolgrad
             beta_j = rk_new/r_old;
             dk = -rk + beta_j * dk;
             r_old = rk_new; 
-            
+            %p_tn = z;
             j = j+1;
 
         end
@@ -174,16 +174,12 @@ while k < kmax && gradfk_norm >= tolgrad
     end
 
     j_cg = j;
-
-    % CG exhausted without satisfying negative curvature or tolerance: use the last valid iterate
     if j == max_cg
         disp('MAX CG (Truncated Newton): maximum number of cg iterations reached.');
-        p_tn = z;   
+        p_tn = z;   % CG esaurito senza soddisfare curvatura negativa o tolleranza: usa l'ultimo iterato valido
     end
-    % Assign the computed step/search direction
     pk = p_tn;
-
-    % Check if the search direction is null
+    
     if norm(pk) <= 1e-12
         disp('Truncated Newton: null direction, stop.');
         if gradfk_norm < tolgrad
@@ -197,8 +193,8 @@ while k < kmax && gradfk_norm >= tolgrad
 
     % BACKTRACKING.
 
-    alpha = 1; % Reset the value of alpha (parameter used for linesearch)
-    xnew = xk + alpha * pk;   % Computing the solution at step k
+    alpha = 1; % Reset the value of alpha (parameter used for linesearch).
+    xnew = xk + alpha * pk;   % Computing the candidate solution at step k.
     fnew = f(xnew);
     c1_gradfk_pk = c1 * gradfk' * pk;
 
